@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salon Üye Takip Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase Bulut Bağlantısı -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <meta name="theme-color" content="#0f172a">
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
@@ -82,17 +85,26 @@
     </div>
 
     <script>
+        // Ücretsiz Ortak Bulut Veritabanı Kurulumu
+        const firebaseConfig = {
+            databaseURL: "https://salon-takip-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
         let currentPhotoBase64 = '';
         let members = [];
 
-        // Şifre Kontrolü
         function checkPassword() {
             const pass = document.getElementById('passwordInput').value;
             if (pass === 'belediye03') {
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('appContainer').classList.remove('hidden');
                 localStorage.setItem('salonAuth', 'true');
-                syncData();
+                startRealtimeSync();
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
@@ -102,20 +114,22 @@
             if (localStorage.getItem('salonAuth') === 'true') {
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('appContainer').classList.remove('hidden');
-                syncData();
+                startRealtimeSync();
             }
         }
 
-        // Ortak Senkronizasyon (Tarayıcılar Arası Ortak Bulut Hafızası)
-        function syncData() {
-            // Tarayıcılar arası ortak anahtar üzerinden veriyi çek
-            const cloudData = localStorage.getItem('salon_ortak_ana_liste');
-            if (cloudData) {
-                members = JSON.parse(cloudData);
-            } else {
+        // Buluttan Canlı Senkronizasyon (Tüm cihazlarda aynı anda görünür)
+        function startRealtimeSync() {
+            db.ref('salon_uyeleri').on('value', (snapshot) => {
+                const data = snapshot.val();
                 members = [];
-            }
-            renderMembers();
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        members.push({ id: key, ...data[key] });
+                    });
+                }
+                renderMembers();
+            });
         }
 
         function switchTab(tab) {
@@ -129,7 +143,7 @@
                 addView.classList.add('hidden');
                 btnList.className = "bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl font-semibold text-sm";
                 btnAdd.className = "bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold text-sm";
-                syncData();
+                renderMembers();
             } else {
                 listView.classList.add('hidden');
                 addView.classList.remove('hidden');
@@ -142,30 +156,49 @@
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    currentPhotoBase64 = e.target.result;
-                    const preview = document.getElementById('previewImg');
-                    preview.src = currentPhotoBase64;
-                    preview.classList.remove('hidden');
-                    document.getElementById('photoPlaceholder').classList.add('hidden');
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = 250;
+                        if (width > height) {
+                            if (width > maxDim) { height *= maxDim / width; width = maxDim; }
+                        } else {
+                            if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        const preview = document.getElementById('previewImg');
+                        preview.src = currentPhotoBase64;
+                        preview.classList.remove('hidden');
+                        document.getElementById('photoPlaceholder').classList.add('hidden');
+                    }
+                    img.src = e.target.result;
                 }
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
         function addMember() {
-            const name = document.getElementById('nameInput').value.trim();
-            const phone = document.getElementById('phoneInput').value.trim();
-            const pkg = document.getElementById('packageInput').value;
+            const nameField = document.getElementById('nameInput');
+            const phoneField = document.getElementById('phoneInput');
+            const packageField = document.getElementById('packageInput');
+
+            const name = nameField.value.trim();
+            const phone = phoneField.value.trim();
+            const pkg = packageField.value;
 
             if (!name) {
                 alert('Lütfen üye adını girin.');
                 return;
             }
 
-            syncData(); // En güncel hali al
-
             const newMember = {
-                id: Date.now(),
                 name: name,
                 phone: phone || 'Belirtilmemiş',
                 package: pkg,
@@ -173,35 +206,30 @@
                 date: new Date().toLocaleDateString('tr-TR')
             };
 
-            members.push(newMember);
-            localStorage.setItem('salon_ortak_ana_liste', JSON.stringify(members));
-            localStorage.setItem('salonMembers', JSON.stringify(members)); // Yedek kanal
-
-            // Formu sıfırla
-            document.getElementById('nameInput').value = '';
-            document.getElementById('phoneInput').value = '';
-            document.getElementById('previewImg').classList.add('hidden');
-            document.getElementById('photoPlaceholder').classList.remove('hidden');
-            currentPhotoBase64 = '';
-            switchTab('list');
+            // Buluta gönder (Tüm cihazlara anında yansır)
+            db.ref('salon_uyeleri').push(newMember, (error) => {
+                if (error) {
+                    alert('Kayıt eklenirken bir hata oluştu.');
+                } else {
+                    // Formu temizle ve listeye dön
+                    nameField.value = '';
+                    phoneField.value = '';
+                    document.getElementById('previewImg').classList.add('hidden');
+                    document.getElementById('photoPlaceholder').classList.add('hidden');
+                    document.getElementById('photoPlaceholder').classList.remove('hidden');
+                    currentPhotoBase64 = '';
+                    switchTab('list');
+                }
+            });
         }
 
         function deleteMember(id) {
             if (confirm('Bu üyeyi silmek istediğinize emin misiniz?')) {
-                syncData();
-                members = members.filter(m => m.id !== id);
-                localStorage.setItem('salon_ortak_ana_liste', JSON.stringify(members));
-                localStorage.setItem('salonMembers', JSON.stringify(members));
-                renderMembers();
+                db.ref('salon_uyeleri/' + id).remove();
             }
         }
 
         function renderMembers() {
-            const cloudData = localStorage.getItem('salon_ortak_ana_liste');
-            if (cloudData) {
-                members = JSON.parse(cloudData);
-            }
-
             const search = document.getElementById('searchInput').value.toLowerCase();
             const listEl = document.getElementById('memberList');
             const filtered = members.filter(m => m.name.toLowerCase().includes(search) || m.phone.includes(search));
@@ -225,12 +253,10 @@
                             <p class="text-[10px] text-slate-500 mt-1">Kayıt: ${m.date}</p>
                         </div>
                     </div>
-                    <button onclick="deleteMember(${m.id})" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/25">Sil</button>
+                    <button onclick="deleteMember('${m.id}')" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/25">Sil</button>
                 </div>
             `).join('');
         }
-
-        renderMembers();
     </script>
 </body>
 </html>
