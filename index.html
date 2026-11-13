@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salon Üye Takip Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <meta name="theme-color" content="#0f172a">
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
@@ -17,7 +15,7 @@
             <h2 class="text-xl font-bold mb-4 text-emerald-400">Salon Takip Girişi</h2>
             <p class="text-sm text-slate-400 mb-4">Lütfen erişim şifresini girin.</p>
             <input type="password" id="passwordInput" placeholder="Şifre" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 mb-4 text-center text-lg focus:outline-none focus:border-emerald-500">
-            <button onclick="checkPassword()" class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-3 rounded-xl transition">Giriş Yap</button>
+            <button onclick="checkPassword()" class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-3 rounded-xl transition text-slate-950">Giriş Yap</button>
             <p id="loginError" class="text-rose-500 text-sm mt-3 hidden">Hatalı şifre!</p>
         </div>
     </div>
@@ -48,6 +46,18 @@
         <div id="addView" class="hidden bg-slate-800/50 border border-slate-800 p-5 rounded-2xl">
             <h2 class="text-lg font-bold mb-4 text-slate-200">Yeni Üye Kaydı</h2>
             <div class="space-y-4">
+                <!-- Fotoğraf / Kamera Alanı -->
+                <div class="flex flex-col items-center justify-center mb-2">
+                    <div id="photoPreviewContainer" class="w-20 h-20 rounded-full bg-slate-800 border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden mb-2 relative">
+                        <span id="photoPlaceholder" class="text-xs text-slate-500 text-center px-1">Fotoğraf Yok</span>
+                        <img id="previewImg" class="w-full h-full object-cover hidden">
+                    </div>
+                    <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer border border-slate-700">
+                        📷 Fotoğraf Çek / Yükle
+                        <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)" class="hidden">
+                    </label>
+                </div>
+
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Ad Soyad</label>
                     <input type="text" id="nameInput" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
@@ -60,6 +70,7 @@
                     <label class="block text-xs text-slate-400 mb-1">Üyelik Paketi / Süresi</label>
                     <select id="packageInput" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
                         <option value="1 Aylık">1 Aylık</option>
+                        <option value="2 Aylık">2 Aylık</option>
                         <option value="3 Aylık">3 Aylık</option>
                         <option value="6 Aylık">6 Aylık</option>
                         <option value="Yıllık">Yıllık</option>
@@ -71,6 +82,8 @@
     </div>
 
     <script>
+        let currentPhotoBase64 = '';
+
         // Şifre Kontrolü
         function checkPassword() {
             const pass = document.getElementById('passwordInput').value;
@@ -83,7 +96,6 @@
             }
         }
 
-        // Oturum Hafızası
         window.onload = function() {
             if (localStorage.getItem('salonAuth') === 'true') {
                 document.getElementById('loginScreen').classList.add('hidden');
@@ -91,7 +103,6 @@
             }
         }
 
-        // Yerel & Güvenli Veri Yönetimi
         let members = JSON.parse(localStorage.getItem('salonMembers')) || [];
 
         function switchTab(tab) {
@@ -114,6 +125,21 @@
             }
         }
 
+        // Fotoğraf İşleme
+        function handlePhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentPhotoBase64 = e.target.result;
+                    const preview = document.getElementById('previewImg');
+                    preview.src = currentPhotoBase64;
+                    preview.classList.remove('hidden');
+                    document.getElementById('photoPlaceholder').classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
         function addMember() {
             const name = document.getElementById('nameInput').value.trim();
             const phone = document.getElementById('phoneInput').value.trim();
@@ -129,15 +155,19 @@
                 name: name,
                 phone: phone || 'Belirtilmemiş',
                 package: pkg,
+                photo: currentPhotoBase64 || '',
                 date: new Date().toLocaleDateString('tr-TR')
             };
 
             members.push(newMember);
             saveAndRender();
 
-            // Formu temizle ve listeye dön
+            // Formu sıfırla
             document.getElementById('nameInput').value = '';
             document.getElementById('phoneInput').value = '';
+            document.getElementById('previewImg').classList.add('hidden');
+            document.getElementById('photoPlaceholder').classList.remove('hidden');
+            currentPhotoBase64 = '';
             switchTab('list');
         }
 
@@ -167,12 +197,17 @@
 
             listEl.innerHTML = filtered.map(m => `
                 <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl flex justify-between items-center">
-                    <div>
-                        <h3 class="font-bold text-slate-200">${m.name}</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">📞 ${m.phone} • <span class="text-emerald-400">${m.package}</span></p>
-                        <p class="text-[10px] text-slate-500 mt-1">Kayıt: ${m.date}</p>
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-full bg-slate-700 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-600">
+                            ${m.photo ? `<img src="${m.photo}" class="w-full h-full object-cover">` : `<span class="text-xs text-slate-400">Üye</span>`}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-200">${m.name}</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">📞 ${m.phone} • <span class="text-emerald-400">${m.package}</span></p>
+                            <p class="text-[10px] text-slate-500 mt-1">Kayıt: ${m.date}</p>
+                        </div>
                     </div>
-                    <button onclick="deleteMember(${m.id})" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">Sil</button>
+                    <button onclick="deleteMember(${m.id})" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/25">Sil</button>
                 </div>
             `).join('');
         }
