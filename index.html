@@ -85,9 +85,9 @@
     </div>
 
     <script>
-        // Ücretsiz Ortak Bulut Veritabanı Kurulumu
+        // Senin Firebase Bulut Veritabanı Adresin
         const firebaseConfig = {
-            databaseURL: "https://salon-takip-default-rtdb.europe-west1.firebasedatabase.app/"
+            databaseURL: "https://salon-takip-48520-default-rtdb.europe-west1.firebasedatabase.app/"
         };
         
         if (!firebase.apps.length) {
@@ -215,7 +215,6 @@
                     nameField.value = '';
                     phoneField.value = '';
                     document.getElementById('previewImg').classList.add('hidden');
-                    document.getElementById('photoPlaceholder').classList.add('hidden');
                     document.getElementById('photoPlaceholder').classList.remove('hidden');
                     currentPhotoBase64 = '';
                     switchTab('list');
