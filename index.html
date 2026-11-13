@@ -9,352 +9,175 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <meta name="theme-color" content="#0f172a">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans pb-16">
+<body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Sifre Giris Ekrani -->
-    <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm space-y-4">
-            <h2 class="text-xl font-bold text-emerald-400 text-center">Salon Takip Girisi</h2>
-            <p class="text-xs text-slate-400 text-center">Devam etmek icin lutfen sifreyi girin.</p>
-            <input type="password" id="passwordInput" placeholder="Sifre" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 text-center tracking-widest">
-            <button onclick="checkPassword()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition shadow-lg text-sm">Giris Yap</button>
-            <p id="loginError" class="text-xs text-rose-400 text-center hidden">Hatali sifre!</p>
+    <!-- Şifre Giriş Ekranı -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-950 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl text-center">
+            <h2 class="text-xl font-bold mb-4 text-emerald-400">Salon Takip Girişi</h2>
+            <p class="text-sm text-slate-400 mb-4">Lütfen erişim şifresini girin.</p>
+            <input type="password" id="passwordInput" placeholder="Şifre" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 mb-4 text-center text-lg focus:outline-none focus:border-emerald-500">
+            <button onclick="checkPassword()" class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-3 rounded-xl transition">Giriş Yap</button>
+            <p id="loginError" class="text-rose-500 text-sm mt-3 hidden">Hatalı şifre!</p>
         </div>
     </div>
 
     <!-- Ana Uygulama -->
-    <div id="appContent" class="hidden">
-        <header class="bg-slate-800 border-b border-slate-700 shadow-md py-4 px-6 flex justify-between items-center sticky top-0 z-40">
-            <h1 class="text-lg font-bold tracking-wide text-emerald-400 flex items-center gap-2">
-                Salon Takip
-            </h1>
-            <div class="flex gap-2">
-                <button onclick="showTab('list')" id="btn-list" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-emerald-500">Uyeler</button>
-                <button onclick="showTab('add')" id="btn-add" class="bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-slate-600">+ Uye Ekle</button>
+    <div id="appContainer" class="max-w-md mx-auto p-4 hidden">
+        <header class="flex justify-between items-center mb-6 pt-2">
+            <h1 class="text-xl font-bold text-emerald-400">Salon Takip</h1>
+            <div class="space-x-2">
+                <button onclick="switchTab('list')" id="btnList" class="bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl font-semibold text-sm">Üyeler</button>
+                <button onclick="switchTab('add')" id="btnAdd" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold text-sm">+ Üye Ekle</button>
             </div>
         </header>
 
-        <main class="max-w-4xl mx-auto p-4 mt-4">
-            <section id="tab-list" class="space-y-4">
-                <div class="flex flex-col sm:flex-row gap-3 justify-between items-center bg-slate-800 p-3 rounded-xl border border-slate-700 shadow">
-                    <input type="text" id="searchInput" oninput="renderMembers()" placeholder="Isim veya telefon ile ara..." class="w-full sm:w-80 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
-                    <div class="text-xs text-slate-400">
-                        Toplam Uye: <span id="memberCount" class="font-bold text-emerald-400">0</span>
-                    </div>
+        <!-- Arama ve Özet -->
+        <div id="listView">
+            <div class="bg-slate-800/50 border border-slate-800 p-4 rounded-2xl mb-4">
+                <input type="text" id="searchInput" oninput="renderMembers()" placeholder="İsim veya telefon ile ara..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm mb-3 focus:outline-none focus:border-emerald-500">
+                <div class="text-xs text-slate-400 text-center">Toplam Üye: <span id="totalCount" class="text-emerald-400 font-bold">0</span></div>
+            </div>
+
+            <div id="memberList" class="space-y-3 pb-10">
+                <!-- Üyeler buraya listelenecek -->
+            </div>
+        </div>
+
+        <!-- Üye Ekleme Formu -->
+        <div id="addView" class="hidden bg-slate-800/50 border border-slate-800 p-5 rounded-2xl">
+            <h2 class="text-lg font-bold mb-4 text-slate-200">Yeni Üye Kaydı</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Ad Soyad</label>
+                    <input type="text" id="nameInput" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
                 </div>
-                <div id="memberList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            </section>
-
-            <section id="tab-add" class="hidden bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-lg max-w-lg mx-auto space-y-4">
-                <h2 id="formTitle" class="text-lg font-bold text-emerald-400 border-b border-slate-700 pb-2">Yeni Uye Kaydi</h2>
-                <form id="memberForm" onsubmit="saveMember(event)" class="space-y-3">
-                    <input type="hidden" id="editMemberId">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Ad Soyad</label>
-                        <input type="text" id="name" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" placeholder="Orn: Ahmet Yilmaz">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Telefon Numarasi</label>
-                        <input type="tel" id="phone" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" placeholder="0555 555 55 55">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1" id="durationLabel">Uyelik Suresi</label>
-                        <select id="duration" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
-                            <option value="1">1 Ay</option>
-                            <option value="2">2 Ay</option>
-                            <option value="3">3 Ay</option>
-                            <option value="6">6 Ay</option>
-                            <option value="12">1 Yil</option>
-                        </select>
-                    </div>
-                    <div class="space-y-2" id="photoSection">
-                        <div class="flex justify-between items-center">
-                            <label class="block text-xs font-medium text-slate-300">Uye Fotografi</label>
-                            <button type="button" onclick="switchCamera()" id="switchCamBtn" class="text-xs bg-slate-700 hover:bg-slate-600 text-emerald-400 px-2 py-1 rounded transition hidden">Kamera Degistir</button>
-                        </div>
-                        <div class="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-xl p-3 bg-slate-900/50">
-                            <video id="camera" autoplay playsinline class="w-full max-h-56 rounded-lg bg-black object-cover mb-2 hidden"></video>
-                            <canvas id="canvas" class="hidden"></canvas>
-                            <img id="photoPreview" class="w-28 h-28 rounded-full object-cover border-2 border-emerald-500 mb-2 hidden">
-                            <div class="flex gap-2 w-full justify-center">
-                                <button type="button" onclick="startCamera()" id="startCamBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex-1">Kamerayi Ac</button>
-                                <button type="button" onclick="takeSnapshot()" id="snapBtn" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex-1 hidden">Fotograf Cek</button>
-                                <button type="button" onclick="retakePhoto()" id="retakeBtn" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex-1 hidden">Tekrar Cek</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition shadow-lg text-sm">Uyeyi Kaydet</button>
-                        <button type="button" id="cancelBtn" onclick="resetForm()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2.5 px-4 rounded-xl transition text-sm">Iptal</button>
-                    </div>
-                </form>
-            </section>
-        </main>
-    </div>
-
-    <!-- Fotograf Buyutme (Modal) Alani -->
-    <div id="imageModal" onclick="closeImageModal()" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
-        <div class="relative max-w-lg w-full flex flex-col items-center">
-            <img id="modalImage" class="w-72 h-72 rounded-2xl object-cover border-4 border-emerald-500 shadow-2xl mb-3">
-            <button class="bg-slate-800 text-slate-200 px-4 py-2 rounded-xl text-xs font-semibold border border-slate-700">Kapat</button>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Telefon Numarası</label>
+                    <input type="tel" id="phoneInput" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Üyelik Paketi / Süresi</label>
+                    <select id="packageInput" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500">
+                        <option value="1 Aylık">1 Aylık</option>
+                        <option value="3 Aylık">3 Aylık</option>
+                        <option value="6 Aylık">6 Aylık</option>
+                        <option value="Yıllık">Yıllık</option>
+                    </select>
+                </div>
+                <button onclick="addMember()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold py-3 rounded-xl transition mt-2">Kaydet</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = {
-            databaseURL: "https://salon-takip-default-rtdb.europe-west1.firebasedatabase.app/"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        let members = [];
-        let capturedImageData = null;
-        let videoStream = null;
-        let useFrontCamera = true;
-
+        // Şifre Kontrolü
         function checkPassword() {
             const pass = document.getElementById('passwordInput').value;
-            if (pass === "belediye03") {
+            if (pass === 'belediye03') {
                 document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('appContent').classList.remove('hidden');
-                initApp();
+                document.getElementById('appContainer').classList.remove('hidden');
+                localStorage.setItem('salonAuth', 'true');
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
         }
 
-        function initApp() {
-            db.ref('members').on('value', (snapshot) => {
-                const data = snapshot.val();
-                members = data ? Object.values(data) : [];
-                renderMembers();
-            });
+        // Oturum Hafızası
+        window.onload = function() {
+            if (localStorage.getItem('salonAuth') === 'true') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+            }
         }
 
-        function showTab(tab) {
-            const listSection = document.getElementById('tab-list');
-            const addSection = document.getElementById('tab-add');
-            const btnList = document.getElementById('btn-list');
-            const btnAdd = document.getElementById('btn-add');
+        // Yerel & Güvenli Veri Yönetimi
+        let members = JSON.parse(localStorage.getItem('salonMembers')) || [];
+
+        function switchTab(tab) {
+            const listView = document.getElementById('listView');
+            const addView = document.getElementById('addView');
+            const btnList = document.getElementById('btnList');
+            const btnAdd = document.getElementById('btnAdd');
 
             if (tab === 'list') {
-                listSection.classList.remove('hidden');
-                addSection.classList.add('hidden');
-                btnList.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-emerald-500";
-                btnAdd.className = "bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-slate-600";
-                stopCamera();
-                resetForm();
+                listView.classList.remove('hidden');
+                addView.classList.add('hidden');
+                btnList.className = "bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl font-semibold text-sm";
+                btnAdd.className = "bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold text-sm";
                 renderMembers();
             } else {
-                listSection.classList.add('hidden');
-                addSection.classList.remove('hidden');
-                btnAdd.className = "bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-emerald-500";
-                btnList.className = "bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:bg-slate-600";
+                listView.classList.add('hidden');
+                addView.classList.remove('hidden');
+                btnAdd.className = "bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl font-semibold text-sm";
+                btnList.className = "bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-semibold text-sm";
             }
         }
 
-        async function startCamera() {
-            const video = document.getElementById('camera');
-            const startBtn = document.getElementById('startCamBtn');
-            const snapBtn = document.getElementById('snapBtn');
-            const switchBtn = document.getElementById('switchCamBtn');
-            const preview = document.getElementById('photoPreview');
+        function addMember() {
+            const name = document.getElementById('nameInput').value.trim();
+            const phone = document.getElementById('phoneInput').value.trim();
+            const pkg = document.getElementById('packageInput').value;
 
-            stopCamera();
-            try {
-                const constraints = { video: { facingMode: useFrontCamera ? 'user' : 'environment' }, audio: false };
-                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = videoStream;
-                video.classList.remove('hidden');
-                preview.classList.add('hidden');
-                startBtn.classList.add('hidden');
-                snapBtn.classList.remove('hidden');
-                switchBtn.classList.remove('hidden');
-            } catch (err) {
-                alert("Kamera erisimi saglanamadi!");
-            }
-        }
-
-        function switchCamera() {
-            useFrontCamera = !useFrontCamera;
-            startCamera();
-        }
-
-        function takeSnapshot() {
-            const video = document.getElementById('camera');
-            const canvas = document.getElementById('canvas');
-            const preview = document.getElementById('photoPreview');
-            const snapBtn = document.getElementById('snapBtn');
-            const retakeBtn = document.getElementById('retakeBtn');
-            const switchBtn = document.getElementById('switchCamBtn');
-
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
-            preview.src = capturedImageData;
-            preview.classList.remove('hidden');
-            video.classList.add('hidden');
-            stopCamera();
-            snapBtn.classList.add('hidden');
-            switchBtn.classList.add('hidden');
-            retakeBtn.classList.remove('hidden');
-        }
-
-        function retakePhoto() {
-            capturedImageData = null;
-            document.getElementById('photoPreview').classList.add('hidden');
-            document.getElementById('retakeBtn').classList.add('hidden');
-            startCamera();
-        }
-
-        function stopCamera() {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-        }
-
-        function openRenewModal(id) {
-            const member = members.find(m => m.id === id);
-            if (!member) return;
-
-            showTab('add');
-            document.getElementById('editMemberId').value = member.id;
-            document.getElementById('name').value = member.name;
-            document.getElementById('name').disabled = true;
-            document.getElementById('phone').value = member.phone;
-            document.getElementById('phone').disabled = true;
-            document.getElementById('formTitle').innerText = `${member.name} - Uyelik Suresi Uzat`;
-            document.getElementById('submitBtn').innerText = "Sureyi Ekle";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            document.getElementById('photoSection').classList.add('hidden');
-            capturedImageData = member.photo;
-        }
-
-        function resetForm() {
-            document.getElementById('memberForm').reset();
-            document.getElementById('editMemberId').value = '';
-            document.getElementById('name').disabled = false;
-            document.getElementById('phone').disabled = false;
-            document.getElementById('formTitle').innerText = "Yeni Uye Kaydi";
-            document.getElementById('submitBtn').innerText = "Uyeyi Kaydet";
-            document.getElementById('cancelBtn').classList.add('hidden');
-            document.getElementById('photoSection').classList.remove('hidden');
-            document.getElementById('photoPreview').classList.add('hidden');
-            document.getElementById('startCamBtn').classList.remove('hidden');
-            document.getElementById('retakeBtn').classList.add('hidden');
-            document.getElementById('switchCamBtn').classList.add('hidden');
-            capturedImageData = null;
-            stopCamera();
-        }
-
-        function openImageModal(photoUrl) {
-            document.getElementById('modalImage').src = photoUrl;
-            document.getElementById('imageModal').classList.remove('hidden');
-        }
-
-        function closeImageModal() {
-            document.getElementById('imageModal').classList.add('hidden');
-        }
-
-        function saveMember(e) {
-            e.preventDefault();
-            const editId = document.getElementById('editMemberId').value;
-            const durationMonths = parseInt(document.getElementById('duration').value);
-
-            if (editId) {
-                const member = members.find(m => m.id == editId);
-                if (member) {
-                    const now = new Date().getTime();
-                    let baseTime = member.rawEndDate > now ? member.rawEndDate : now;
-                    let endDate = new Date(baseTime);
-                    endDate.setMonth(endDate.getMonth() + durationMonths);
-
-                    member.endDate = endDate.toLocaleDateString('tr-TR');
-                    member.rawEndDate = endDate.getTime();
-
-                    db.ref('members/' + member.id).set(member);
-                    showTab('list');
-                }
-            } else {
-                const name = document.getElementById('name').value;
-                const phone = document.getElementById('phone').value;
-
-                if (!capturedImageData) {
-                    alert("Lutfen uye icin bir fotograf cekin!");
-                    return;
-                }
-
-                const startDate = new Date();
-                const endDate = new Date();
-                endDate.setMonth(startDate.getMonth() + durationMonths);
-                const memberId = Date.now();
-
-                const newMember = {
-                    id: memberId,
-                    name,
-                    phone,
-                    startDate: startDate.toLocaleDateString('tr-TR'),
-                    endDate: endDate.toLocaleDateString('tr-TR'),
-                    rawEndDate: endDate.getTime(),
-                    photo: capturedImageData
-                };
-
-                db.ref('members/' + memberId).set(newMember);
-                showTab('list');
-            }
-            resetForm();
-        }
-
-        function renderMembers() {
-            const searchField = document.getElementById('searchInput');
-            const search = searchField ? searchField.value.toLowerCase() : '';
-            const container = document.getElementById('memberList');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const filtered = members.filter(m => m.name.toLowerCase().includes(search) || m.phone.includes(search));
-            const countEl = document.getElementById('memberCount');
-            if (countEl) countEl.innerText = members.length;
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500 text-sm">Kayitli uye bulunamadi.</div>`;
+            if (!name) {
+                alert('Lütfen üye adını girin.');
                 return;
             }
 
-            const now = new Date().getTime();
-            filtered.forEach(member => {
-                const isExpired = now > member.rawEndDate;
-                const statusBadge = isExpired 
-                    ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full text-[11px] font-semibold">Suresi Dolmus</span>`
-                    : `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[11px] font-semibold">Aktif Uye</span>`;
+            const newMember = {
+                id: Date.now(),
+                name: name,
+                phone: phone || 'Belirtilmemiş',
+                package: pkg,
+                date: new Date().toLocaleDateString('tr-TR')
+            };
 
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center gap-3 shadow";
-                card.innerHTML = `
-                    <img src="${member.photo}" onclick="openImageModal('${member.photo}')" class="w-16 h-16 rounded-full object-cover border-2 ${isExpired ? 'border-rose-500' : 'border-emerald-500'} flex-shrink-0 cursor-pointer hover:opacity-80 transition" title="Fotografi buyut">
-                    <div class="flex-grow min-w-0">
-                        <h3 class="font-bold text-base text-slate-100 truncate">${member.name}</h3>
-                        <p class="text-xs text-slate-400 mb-0.5">Tel: ${member.phone}</p>
-                        <p class="text-xs text-slate-400 mb-1.5">Bitis: ${member.endDate}</p>
-                        <div>${statusBadge}</div>
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <button onclick="openRenewModal(${member.id})" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 px-2.5 py-1 rounded-lg text-xs font-semibold transition">Sure Ekle</button>
-                        <button onclick="deleteMember(${member.id})" class="text-slate-500 hover:text-rose-400 text-xs text-center transition py-0.5">Sil</button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+            members.push(newMember);
+            saveAndRender();
+
+            // Formu temizle ve listeye dön
+            document.getElementById('nameInput').value = '';
+            document.getElementById('phoneInput').value = '';
+            switchTab('list');
         }
 
         function deleteMember(id) {
-            if (confirm("Bu uyeyi silmek istediginize emin misiniz?")) {
-                db.ref('members/' + id).remove();
+            if (confirm('Bu üyeyi silmek istediğinize emin misiniz?')) {
+                members = members.filter(m => m.id !== id);
+                saveAndRender();
             }
         }
+
+        function saveAndRender() {
+            localStorage.setItem('salonMembers', JSON.stringify(members));
+            renderMembers();
+        }
+
+        function renderMembers() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const listEl = document.getElementById('memberList');
+            const filtered = members.filter(m => m.name.toLowerCase().includes(search) || m.phone.includes(search));
+
+            document.getElementById('totalCount').innerText = members.length;
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">Kayıtlı üye bulunamadı.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(m => `
+                <div class="bg-slate-800/40 border border-slate-800 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-200">${m.name}</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">📞 ${m.phone} • <span class="text-emerald-400">${m.package}</span></p>
+                        <p class="text-[10px] text-slate-500 mt-1">Kayıt: ${m.date}</p>
+                    </div>
+                    <button onclick="deleteMember(${m.id})" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20">Sil</button>
+                </div>
+            `).join('');
+        }
+
+        renderMembers();
     </script>
 </body>
 </html>
