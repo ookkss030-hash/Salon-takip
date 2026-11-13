@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salon Üye Takip Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase Kütüphaneleri -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <meta name="theme-color" content="#0f172a">
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
@@ -82,7 +85,15 @@
     </div>
 
     <script>
+        // Ücretsiz ve Ortak Firebase Veritabanı Yapılandırması
+        const firebaseConfig = {
+            databaseURL: "https://salon-takip-default-rtdb.europe-west1.firebasedatabase.app/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         let currentPhotoBase64 = '';
+        let members = [];
 
         // Şifre Kontrolü
         function checkPassword() {
@@ -91,6 +102,7 @@
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('appContainer').classList.remove('hidden');
                 localStorage.setItem('salonAuth', 'true');
+                listenMembers(); // Ortak verileri dinlemeye başla
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
@@ -100,10 +112,23 @@
             if (localStorage.getItem('salonAuth') === 'true') {
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('appContainer').classList.remove('hidden');
+                listenMembers();
             }
         }
 
-        let members = JSON.parse(localStorage.getItem('salonMembers')) || [];
+        // Ortak Veritabanından Canlı Dinleme
+        function listenMembers() {
+            db.ref('members').on('value', (snapshot) => {
+                const data = snapshot.val();
+                members = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        members.push({ id: key, ...data[key] });
+                    });
+                }
+                renderMembers();
+            });
+        }
 
         function switchTab(tab) {
             const listView = document.getElementById('listView');
@@ -130,6 +155,7 @@
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    // Boyutu optimize etmek için resmi sıkıştırabiliriz veya doğrudan aktarabiliriz
                     currentPhotoBase64 = e.target.result;
                     const preview = document.getElementById('previewImg');
                     preview.src = currentPhotoBase64;
@@ -151,7 +177,6 @@
             }
 
             const newMember = {
-                id: Date.now(),
                 name: name,
                 phone: phone || 'Belirtilmemiş',
                 package: pkg,
@@ -159,28 +184,26 @@
                 date: new Date().toLocaleDateString('tr-TR')
             };
 
-            members.push(newMember);
-            saveAndRender();
-
-            // Formu sıfırla
-            document.getElementById('nameInput').value = '';
-            document.getElementById('phoneInput').value = '';
-            document.getElementById('previewImg').classList.add('hidden');
-            document.getElementById('photoPlaceholder').classList.remove('hidden');
-            currentPhotoBase64 = '';
-            switchTab('list');
+            // Firebase'e Ortak Kayıt Ekle
+            db.ref('members').push(newMember, (error) => {
+                if (error) {
+                    alert('Kayıt eklenirken bir hata oluştu.');
+                } else {
+                    // Formu sıfırla ve listeye dön
+                    document.getElementById('nameInput').value = '';
+                    document.getElementById('phoneInput').value = '';
+                    document.getElementById('previewImg').classList.add('hidden');
+                    document.getElementById('photoPlaceholder').classList.remove('hidden');
+                    currentPhotoBase64 = '';
+                    switchTab('list');
+                }
+            });
         }
 
         function deleteMember(id) {
             if (confirm('Bu üyeyi silmek istediğinize emin misiniz?')) {
-                members = members.filter(m => m.id !== id);
-                saveAndRender();
+                db.ref('members/' + id).remove();
             }
-        }
-
-        function saveAndRender() {
-            localStorage.setItem('salonMembers', JSON.stringify(members));
-            renderMembers();
         }
 
         function renderMembers() {
@@ -207,12 +230,10 @@
                             <p class="text-[10px] text-slate-500 mt-1">Kayıt: ${m.date}</p>
                         </div>
                     </div>
-                    <button onclick="deleteMember(${m.id})" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/25">Sil</button>
+                    <button onclick="deleteMember('${m.id}')" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/25">Sil</button>
                 </div>
             `).join('');
         }
-
-        renderMembers();
     </script>
 </body>
 </html>
